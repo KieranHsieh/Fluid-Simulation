@@ -1,6 +1,7 @@
 #include <iostream>
 #include "GLT/App.h"
-
+#include "GLT/Utilities/Profiling.h"
+#include <thread>
 int main() {
     {
         GLT::App::WindowInfo info;
@@ -11,19 +12,14 @@ int main() {
         info.title = "Fluid Simulation";
         // Fluid Sim Parameters
         info.dx = 1.0;
-        info.timeStep = 1.0;
-        info.curl = 0.3f;
-        info.velocityDissipation = 0.99f;
-        info.inkDissipation = 0.99f;
-        float* color = new float[3];
-        color[0] = 1.0;
-        color[1] = 0.1;
-        color[2] = 0.1;
-        info.color = color;
+        info.timeStep = 0.5;
+        info.curl = 0.789f;
+        info.velocityDissipation = 0.997f;
+        info.inkDissipation = 0.987f;
+        info.force = 1.0f;
 
         GLT::App app(info);
         app.Start();
-        delete[] color;
     }
     std::cin.get();
 }

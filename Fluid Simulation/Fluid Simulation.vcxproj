@@ -250,6 +250,7 @@
     <ClInclude Include="GLT\OpenGL\Shader.h" />
     <ClInclude Include="GLT\OpenGL\State.h" />
     <ClInclude Include="GLT\OpenGL\Texture2D.h" />
+    <ClInclude Include="GLT\Utilities\Profiling.h" />
     <ClInclude Include="GLT\Utilities\Utilities.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>

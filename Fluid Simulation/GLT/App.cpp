@@ -4,15 +4,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stbi/stb_image.h"
 
-#include <iostream>
-#define _USE_MATH_DEFINES
-#include <math.h>
 #include "OpenGL/Shader.h"
 #include "OpenGL/State.h"
 #include "OpenGL/Buffer.h"
 #include "OpenGL/Texture2D.h"
 #include "OpenGL/Framebuffer.h"
-#include <thread>
 
 /*
     Helper function for texture creation
@@ -33,6 +29,9 @@ using namespace GLT;
 
 App::App(const WindowInfo& info)
 {
+    _m_color[0] = float(rand()) / RAND_MAX;
+    _m_color[1] = float(rand()) / RAND_MAX;
+    _m_color[2] = float(rand()) / RAND_MAX;
     // GLFW Initialization
     m_windowInfo = info;
     if (glfwInit() == GLFW_FALSE) {
@@ -72,6 +71,7 @@ App::App(const WindowInfo& info)
 
 App::~App()
 {
+    delete _m_color;
     glfwDestroyWindow(p_windowHandle);
     glfwTerminate();
 }
@@ -84,12 +84,15 @@ void App::SetupOGLGLFWCallbacks()
     });
     glfwSetMouseButtonCallback(p_windowHandle, [](GLFWwindow* win, int button, int action, int mods) {
         if (button == GLFW_MOUSE_BUTTON_1) {
-            App* shouldClose = reinterpret_cast<App*>(glfwGetWindowUserPointer(win));
+            App* application = reinterpret_cast<App*>(glfwGetWindowUserPointer(win));
             if (action == GLFW_RELEASE) {
-                shouldClose->SetMouseDown(false);
+                application->SetMouseDown(false);
             }
             else if (action == GLFW_PRESS) {
-                shouldClose->SetMouseDown(true);
+                application->SetMouseDown(true);
+                application->_m_color[0] = float(rand()) / RAND_MAX;
+                application->_m_color[1] = float(rand()) / RAND_MAX;
+                application->_m_color[2] = float(rand()) / RAND_MAX;
             }
         }
     });
@@ -239,8 +242,7 @@ void App::Start()
     std::shared_ptr<GLTTexture2D> p2Tex = GLT_MAKE_TEXTURE(p2Tex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
     std::shared_ptr<GLTTexture2D> c1Tex = GLT_MAKE_TEXTURE(c1Tex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RGBA32F, GL_RGBA);
     std::shared_ptr<GLTTexture2D> c2Tex = GLT_MAKE_TEXTURE(c2Tex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RGBA32F, GL_RGBA);
-    std::shared_ptr<GLTTexture2D> d1Tex = GLT_MAKE_TEXTURE(d1Tex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
-    std::shared_ptr<GLTTexture2D> v1Tex = GLT_MAKE_TEXTURE(d1Tex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
+    std::shared_ptr<GLTTexture2D> openTex = GLT_MAKE_TEXTURE(openTex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
 
     /*
         Create Framebuffers
@@ -273,8 +275,8 @@ void App::Start()
     GLuint uWRITE = *u2Tex;
     GLuint uTEMP = 0;
 
-    // Divergence Texture
-    GLuint d1 = *d1Tex;
+    // Texture for vorticity and divergence
+    GLuint freeTex = *openTex;
 
     // Pressure Textures & Swap var
     GLuint pREAD = *p1Tex;
@@ -286,9 +288,6 @@ void App::Start()
     GLuint cREAD = *c1Tex;
     GLuint cWRITE = *c2Tex;
     GLuint cTEMP = 0;
-
-    // Vorticity
-    GLuint v1 = *v1Tex;
 
     /*
         Time tracking
@@ -302,6 +301,8 @@ void App::Start()
         Main Render Loop
     */
     while (!m_shouldClose) {
+        
+        auto now = std::chrono::high_resolution_clock::now();
         lastTime = currTime;
         currTime = glfwGetTime();
         dTime = currTime - lastTime;
@@ -319,6 +320,7 @@ void App::Start()
          |          ADVECTION STAGE         |
          -----------------------------------*/
         
+        GLT_DEBUG_PUSH("Advection");
         p_state->BindShader(*advectionShader);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, uWRITE, 0);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -346,7 +348,6 @@ void App::Start()
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
 
-
         uTEMP = uREAD;
         uREAD = uWRITE;
         uWRITE = uTEMP;
@@ -354,26 +355,30 @@ void App::Start()
         cTEMP = cREAD;
         cREAD = cWRITE;
         cWRITE = cTEMP;
-
+        GLT_DEBUG_POP();
         
         /*---------------------------------------
          |          ADD IMPULSE STAGE           |
          ---------------------------------------*/
         
+        GLT_DEBUG_PUSH("Add Impulse");
+
         if (m_m1down) {
             p_state->BindShader(*splatShader);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, uWRITE, 0);
             glClear(GL_COLOR_BUFFER_BIT);
             float xAdjust = float(m_windowInfo.simWidth) / float(m_windowInfo.width);
             float yAdjust = float(m_windowInfo.simHeight) / float(m_windowInfo.height);
-            glUniform3f(splatShader->GetUniformLocation("color"), 
-                (p_mousePos[0] - p_mousePosOld[0]) * xAdjust, 
-                (-(p_mousePos[1] - p_mousePosOld[1])) * yAdjust,
-                0.0);
+            float xDirRaw = (p_mousePos[0] - p_mousePosOld[0]) * xAdjust;
+            float yDirRaw = -(p_mousePos[1] - p_mousePosOld[1]) * yAdjust;
+            float len = sqrt((xDirRaw * xDirRaw) + (yDirRaw * yDirRaw));
+            float xDir = (xDirRaw / len) * m_windowInfo.force;
+            float yDir = (yDirRaw / len) * m_windowInfo.force;
+            glUniform3f(splatShader->GetUniformLocation("color"), xDir, yDir, 0.0);
             glUniform2f(splatShader->GetUniformLocation("position"), 
                 (p_mousePos[0] / m_windowInfo.width), 
                 (1 - (p_mousePos[1] / m_windowInfo.height)));
-            glUniform1f(splatShader->GetUniformLocation("radius"), 0.1f);
+            glUniform1f(splatShader->GetUniformLocation("radius"), 0.5f);
             glUniform1i(splatShader->GetUniformLocation("base"), 0);
 
             p_state->ActiveTexture(0);
@@ -382,7 +387,7 @@ void App::Start()
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
 
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, cWRITE, 0);
-            glUniform3f(splatShader->GetUniformLocation("color"), m_windowInfo.color[0], m_windowInfo.color[1], m_windowInfo.color[2]);
+            glUniform3f(splatShader->GetUniformLocation("color"), _m_color[0], _m_color[1], _m_color[2]);
 
             p_state->ActiveTexture(0);
             glBindTexture(GL_TEXTURE_RECTANGLE_NV, cREAD);
@@ -398,13 +403,15 @@ void App::Start()
             cWRITE = cTEMP;
         }
     
-
+        GLT_DEBUG_POP();
         /*-------------------------------------
          |          VORTICITY STAGE           |
          -------------------------------------*/
         
+        GLT_DEBUG_PUSH("Vorticity");
+
         p_state->BindShader(*vorticityGradShader);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, v1, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, freeTex, 0);
 
         glUniform1i(vorticityGradShader->GetUniformLocation("u"), 0);
 
@@ -423,7 +430,7 @@ void App::Start()
         glUniform2f(vorticityShader->GetUniformLocation("dxscale"), m_windowInfo.curl * m_windowInfo.dx, m_windowInfo.curl * m_windowInfo.dx);
 
         p_state->ActiveTexture(0);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, v1);
+        glBindTexture(GL_TEXTURE_RECTANGLE_NV, freeTex);
         p_state->ActiveTexture(1);
         glBindTexture(GL_TEXTURE_RECTANGLE_NV, uREAD);
 
@@ -433,12 +440,15 @@ void App::Start()
         uREAD = uWRITE;
         uWRITE = uTEMP;
 
+        GLT_DEBUG_POP();
         /*-------------------------------------
          |          DIVERGENCE STAGE          |
          -------------------------------------*/
         
+        GLT_DEBUG_PUSH("Divergence");
+
         p_state->BindShader(*divergenceShader);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, d1, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, freeTex, 0);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glUniform1i(divergenceShader->GetUniformLocation("w"), 0);
@@ -448,10 +458,13 @@ void App::Start()
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
 
+        GLT_DEBUG_POP();
         /*--------------------------------------- 
          |          CALCULATE PRESSURE          |
          ---------------------------------------*/
         
+        GLT_DEBUG_PUSH("Pressure");
+
         p_state->BindShader(*jacobiShader);
         
         glUniform1i(jacobiShader->GetUniformLocation("b"), 0);
@@ -460,7 +473,7 @@ void App::Start()
         glUniform1f(jacobiShader->GetUniformLocation("rBeta"), 0.25f);
 
         p_state->ActiveTexture(0);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, d1);
+        glBindTexture(GL_TEXTURE_RECTANGLE_NV, freeTex);
 
         p_state->ActiveTexture(1);
         glBindTexture(GL_TEXTURE_RECTANGLE_NV, pWRITE);
@@ -469,7 +482,7 @@ void App::Start()
         glClearTexImage(pREAD, 0, GL_RG, GL_FLOAT, NULL);
         
 
-        const unsigned int numItersPressure = 50;
+        const unsigned int numItersPressure = 40;
         for (unsigned int i = 0; i < numItersPressure; i++) {
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, pREAD, 0);
             glClear(GL_COLOR_BUFFER_BIT);
@@ -484,10 +497,13 @@ void App::Start()
             pWRITE = pTEMP;
         }
 
+        GLT_DEBUG_POP();
         /*-------------------------------------------------------
          |          SUBTRACT PRESSURE GRADIENT STAGE            |
          -------------------------------------------------------*/
         
+        GLT_DEBUG_PUSH("Subtract Gradient");
+
         p_state->BindShader(*gradientShader);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, uWRITE, 0);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -506,10 +522,13 @@ void App::Start()
         uREAD = uWRITE;
         uWRITE = uTEMP;
 
+        GLT_DEBUG_POP();
         /*---------------------------------------------
          |          COPY TO DRAW FRAMEBUFFER          |
          ---------------------------------------------*/
         
+        GLT_DEBUG_PUSH("Draw");
+
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, cWRITE, 0);
         
         p_state->BindShader(*displayShader);
@@ -520,7 +539,11 @@ void App::Start()
         glBindTexture(GL_TEXTURE_RECTANGLE_NV, cREAD);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+
+        GLT_DEBUG_POP();
         
+        GLT_DEBUG_PUSH("Copy To Default Framebuffer");
+
         p_state->BindFramebuffer(0);
         glViewport(0, 0, m_windowInfo.width, m_windowInfo.height);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -528,11 +551,17 @@ void App::Start()
             0, 0, m_windowInfo.simWidth, m_windowInfo.simHeight,
             0, 0, m_windowInfo.width, m_windowInfo.height,
             GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+        GLT_DEBUG_POP();
         
-        
-        
+        GLT_DEBUG_PUSH("GLFW Calls");
         glfwSwapBuffers(p_windowHandle);
         glfwPollEvents();
+#ifdef GLT_DEBUG_PROFILE
+        if (!m_shouldClose) {
+            GLT_DEBUG_POP();
+        }
+#endif
     }
-    
+    GLT_DEBUG_DISPALL();
 }

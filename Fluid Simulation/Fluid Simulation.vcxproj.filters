@@ -131,6 +131,9 @@
     <ClInclude Include="extern\stbi\stbi\stb_image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GLT\Utilities\Profiling.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\vertexShaderBase.vert" />

@@ -21,8 +21,8 @@ namespace GLT {
             float curl;
             float velocityDissipation;
             float inkDissipation;
-            float* color;
             float dx;
+            float force;
         };
         App(const WindowInfo& info);
         ~App();
@@ -35,6 +35,8 @@ namespace GLT {
             p_mousePos[1] = y; 
         }
         inline void SetMouseDown(bool isDown) { m_m1down = isDown; }
+
+        float* _m_color = new float[3];
     private:
         // Helper function that sets up basic GLFW callback functions
         void SetupOGLGLFWCallbacks();

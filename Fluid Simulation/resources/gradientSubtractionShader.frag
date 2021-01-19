@@ -16,8 +16,8 @@ layout(std140, binding = 0) uniform shaderData {
 void main() {
     float pL = texture(p, vTexCoords - vec2(1.0, 0.0)).x;
     float pR = texture(p, vTexCoords + vec2(1.0, 0.0)).x;
-    float pB = texture(p, vTexCoords - vec2(0.0, 1.0)).x;
-    float pT = texture(p, vTexCoords + vec2(0.0, 1.0)).x;
+    float pB = texture(p, vTexCoords - vec2(0.0, 1.0)).y;
+    float pT = texture(p, vTexCoords + vec2(0.0, 1.0)).y;
     
     fColor = texture(w, vTexCoords);
     fColor.xy -= hrdx * vec2(pR - pL, pT - pB);
