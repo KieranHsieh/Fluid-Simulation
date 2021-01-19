@@ -11,7 +11,7 @@ GLTFramebuffer::GLTFramebuffer(std::unique_ptr<GLTState>& state, const std::vect
     GLuint prevFramebuffer = state->GetPrevious(GL_FRAMEBUFFER);
     state->BindFramebuffer(m_id);
     for (size_t i = 0; i < attachments.size(); i ++) {
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, *attachments[i], 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(i), GL_TEXTURE_2D, *attachments[i], 0);
     }
     state->BindFramebuffer(prevFramebuffer);
 }

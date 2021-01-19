@@ -42,7 +42,7 @@ namespace GLT {
         std::vector<std::string> retMatches;
         std::smatch matches;
         std::regex_match(target, matches, exp);
-        unsigned int numMatches = matches.size();
+        unsigned int numMatches = static_cast<unsigned int>(matches.size());
         if (!numMatches) {
             return retMatches;
         }

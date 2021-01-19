@@ -214,10 +214,10 @@ void App::Start()
     */
 
     GLfloat quadVertices[] = {
-        -1.0f, -1.0f,       +0.0f,                      +0.0f,                       // Bottom Left
-        -1.0f, +1.0f,       +0.0f,                      m_windowInfo.simHeight,      // Top Left
-        +1.0f, -1.0f,       m_windowInfo.simWidth,      +0.0f,                       // Bottom Right
-        +1.0f, +1.0f,       m_windowInfo.simWidth,      m_windowInfo.simHeight,      // Top Right
+        -1.0f, -1.0f,       +0.0f,                      +0.0f,                                                                  // Bottom Left
+        -1.0f, +1.0f,       +0.0f,                      static_cast<GLfloat>(m_windowInfo.simHeight),                           // Top Left
+        +1.0f, -1.0f,       static_cast<GLfloat>(m_windowInfo.simWidth),      +0.0f,                                            // Bottom Right
+        +1.0f, +1.0f,       static_cast<GLfloat>(m_windowInfo.simWidth),      static_cast<GLfloat>(m_windowInfo.simHeight),     // Top Right
     };
     GLuint quadIndices[] = {
         0, 2, 1,
@@ -293,7 +293,7 @@ void App::Start()
         Time tracking
     */
 
-    float currTime = glfwGetTime();
+    float currTime = static_cast<float>(glfwGetTime());
     float lastTime = currTime;
     float dTime = currTime - lastTime;
 
@@ -304,7 +304,7 @@ void App::Start()
         
         auto now = std::chrono::high_resolution_clock::now();
         lastTime = currTime;
-        currTime = glfwGetTime();
+        currTime = static_cast<float>(glfwGetTime());
         dTime = currTime - lastTime;
 
 
@@ -369,15 +369,15 @@ void App::Start()
             glClear(GL_COLOR_BUFFER_BIT);
             float xAdjust = float(m_windowInfo.simWidth) / float(m_windowInfo.width);
             float yAdjust = float(m_windowInfo.simHeight) / float(m_windowInfo.height);
-            float xDirRaw = (p_mousePos[0] - p_mousePosOld[0]) * xAdjust;
-            float yDirRaw = -(p_mousePos[1] - p_mousePosOld[1]) * yAdjust;
+            float xDirRaw = static_cast<float>(p_mousePos[0] - p_mousePosOld[0]) * xAdjust;
+            float yDirRaw = -static_cast<float>(p_mousePos[1] - p_mousePosOld[1]) * yAdjust;
             float len = sqrt((xDirRaw * xDirRaw) + (yDirRaw * yDirRaw));
             float xDir = (xDirRaw / len) * m_windowInfo.force;
             float yDir = (yDirRaw / len) * m_windowInfo.force;
             glUniform3f(splatShader->GetUniformLocation("color"), xDir, yDir, 0.0);
             glUniform2f(splatShader->GetUniformLocation("position"), 
-                (p_mousePos[0] / m_windowInfo.width), 
-                (1 - (p_mousePos[1] / m_windowInfo.height)));
+                static_cast<float>(p_mousePos[0] / m_windowInfo.width), 
+                static_cast<float>(1 - (p_mousePos[1] / m_windowInfo.height)));
             glUniform1f(splatShader->GetUniformLocation("radius"), 0.5f);
             glUniform1i(splatShader->GetUniformLocation("base"), 0);
 
@@ -426,7 +426,7 @@ void App::Start()
         glUniform1i(vorticityShader->GetUniformLocation("vort"), 0);
         glUniform1i(vorticityShader->GetUniformLocation("u"), 1);
         glUniform1f(vorticityShader->GetUniformLocation("timestep"), m_windowInfo.timeStep);
-        glUniform1f(vorticityShader->GetUniformLocation("epsilon"), 2.4414e-4);
+        glUniform1f(vorticityShader->GetUniformLocation("epsilon"), 2.4414e-4f);
         glUniform2f(vorticityShader->GetUniformLocation("dxscale"), m_windowInfo.curl * m_windowInfo.dx, m_windowInfo.curl * m_windowInfo.dx);
 
         p_state->ActiveTexture(0);
