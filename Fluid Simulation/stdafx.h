@@ -6,10 +6,12 @@
 
 #include <iostream>
 #include <stdlib.h>
+#include <cstring>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include <glad/glad.h>
 
 #ifdef GLT_DEBUG
 //#define GLT_DEBUG_MEMORY
@@ -26,8 +28,8 @@
 
 #ifdef GLT_DEBUG_PROFILE
 #include "GLT/Utilities/Profiling.h"
-#define GLT_DEBUG_PUSH(name) GLT::GLTPushProfileEntry(name)
-#define GLT_DEBUG_POP() GLT::GLTPopProfileEntry()
+#define GLT_DEBUG_PUSH(name) GLT::GLTPushProfileEntry(name);
+#define GLT_DEBUG_POP() GLT::GLTPopProfileEntry();
 #define GLT_DEBUG_DISPALL() GLT::GLTDisplayAll()
 #define GLT_DEBUG_DISP(size, ...) { \
     std::string glttempentries[size] = {__VA_ARGS__};\

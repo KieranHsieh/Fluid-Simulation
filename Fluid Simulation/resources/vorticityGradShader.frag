@@ -13,11 +13,10 @@ layout(std140, binding = 0) uniform shaderData {
 uniform sampler2DRect u;
 
 void main() {
-    vec4 ul = texture(u, vTexCoords - vec2(1.0, 0.0));
-    vec4 ur = texture(u, vTexCoords + vec2(1.0, 0.0));
-    vec4 ub = texture(u, vTexCoords - vec2(0.0, 1.0));
-    vec4 ut = texture(u, vTexCoords + vec2(0.0, 1.0));
-  
-    float vort = hrdx * ((ur.y - ul.y) - (ut.x - ub.x));
-    fColor = vec4(vort);
+    float vl = texture(u, vTexCoords - vec2(1.0, 0.0)).y;
+    float vr = texture(u, vTexCoords + vec2(1.0, 0.0)).y;
+    float vb = texture(u, vTexCoords - vec2(0.0, 1.0)).x;
+    float vt = texture(u, vTexCoords + vec2(0.0, 1.0)).x;
+
+    fColor = vec4(hrdx * (vr - vl - vt + vb), 0.0, 0.0, 1.0);
 }

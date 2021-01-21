@@ -7,7 +7,7 @@ uniform sampler2DRect vort;
 uniform sampler2DRect u;
 uniform vec2 dxscale;
 uniform float timestep;
-uniform float epsilon;
+//uniform float epsilon;
 
 layout(std140, binding = 0) uniform shaderData {
     vec2 gridDimensions;
@@ -23,11 +23,10 @@ void main() {
     float vc = texture(vort, vTexCoords).x;
 
     vec2 force = hrdx * vec2(abs(vt) - abs(vb), abs(vr) - abs(vl));
-    float lengthSquared = max(epsilon, dot(force, force));
-    force *= inversesqrt(lengthSquared);
-    force *= dxscale * vc * vec2(1.0, -1.0);
+    float lengthSquared = max(2.14414e-4, dot(force, force));
+    force *= inversesqrt(lengthSquared) * dxscale * vc;
+    force.y *= -1.0;
 
     vec2 velc = texture(u, vTexCoords).xy;
-    velc += timestep * force;
-    fColor = vec4(velc, 0.0, 0.0);
+    fColor = vec4(velc + (timestep * force), 0.0, 1.0);
 }

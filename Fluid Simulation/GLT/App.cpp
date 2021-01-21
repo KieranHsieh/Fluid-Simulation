@@ -14,10 +14,10 @@
     Helper function for texture creation
 */
 static void SetupTexture(GLuint texID, GLenum filter) {
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, filter);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, filter);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, filter);
+    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, filter);
+    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 }
 
 #define GLT_MAKE_TEXTURE(varName, type, width, height, sizedFormat, unsizedFormat) \
@@ -90,9 +90,9 @@ void App::SetupOGLGLFWCallbacks()
             }
             else if (action == GLFW_PRESS) {
                 application->SetMouseDown(true);
-                application->_m_color[0] = float(rand()) / RAND_MAX;
-                application->_m_color[1] = float(rand()) / RAND_MAX;
-                application->_m_color[2] = float(rand()) / RAND_MAX;
+                application->_m_color[0] = (float(rand()) / RAND_MAX) * 0.5f;
+                application->_m_color[1] = (float(rand()) / RAND_MAX) * 0.5f;
+                application->_m_color[2] = (float(rand()) / RAND_MAX) * 0.5f;
             }
         }
     });
@@ -188,12 +188,6 @@ void App::Start()
     gradientShader->Link();
 
     baseVertexStage = GLTShaderStage(GL_VERTEX_SHADER, "resources/vertexShaderBase.vert");
-    GLTShaderStage displayShaderStage(GL_FRAGMENT_SHADER, "resources/displayShader.frag");
-    std::shared_ptr<GLTShaderProgram> displayShader = std::make_shared<GLTShaderProgram>("Display Shader");
-    displayShader->AttachShaderStage(baseVertexStage);
-    displayShader->AttachShaderStage(displayShaderStage);
-    displayShader->Link();
-    baseVertexStage = GLTShaderStage(GL_VERTEX_SHADER, "resources/vertexShaderBase.vert");
     GLTShaderStage vorticityGradShaderStage(GL_FRAGMENT_SHADER, "resources/vorticityGradShader.frag");
     std::shared_ptr<GLTShaderProgram> vorticityGradShader = std::make_shared<GLTShaderProgram>("Vorticity Gradient Shader");
     vorticityGradShader->AttachShaderStage(baseVertexStage);
@@ -202,27 +196,38 @@ void App::Start()
     
     baseVertexStage = GLTShaderStage(GL_VERTEX_SHADER, "resources/vertexShaderBase.vert");
     GLTShaderStage vorticityShaderStage(GL_FRAGMENT_SHADER, "resources/vorticityShader.frag");
-    std::shared_ptr<GLTShaderProgram> vorticityShader = std::make_shared<GLTShaderProgram>("");
+    std::shared_ptr<GLTShaderProgram> vorticityShader = std::make_shared<GLTShaderProgram>("Vorticity Shader");
     vorticityShader->AttachShaderStage(baseVertexStage);
     vorticityShader->AttachShaderStage(vorticityShaderStage);
     vorticityShader->Link();
-    
 
+    baseVertexStage = GLTShaderStage(GL_VERTEX_SHADER, "resources/vertexShaderBase.vert");
+    GLTShaderStage displayShaderStage(GL_FRAGMENT_SHADER, "resources/displayShader.frag");
+    std::shared_ptr<GLTShaderProgram> displayShader = std::make_shared<GLTShaderProgram>("Display Shader");
+    displayShader->AttachShaderStage(baseVertexStage);
+    displayShader->AttachShaderStage(displayShaderStage);
+    displayShader->Link();
 
     /*
         Create Full Screen Quad VBO,VAO, and EBO
     */
-
+    const float pixelSizeX = (1.0f / static_cast<GLfloat>(m_windowInfo.simWidth))  * 2.0f;
+    const float pixelSizeY = (1.0f / static_cast<GLfloat>(m_windowInfo.simHeight)) * 2.0f;
+    const float interiorSMax = static_cast<GLfloat>(m_windowInfo.simWidth)  - 1.0f;
+    const float interiorTMax = static_cast<GLfloat>(m_windowInfo.simHeight) - 1.0f;
+    const float interiorSMin = 1.0;
+    const float interiorTMin = 1.0;
     GLfloat quadVertices[] = {
-        -1.0f, -1.0f,       +0.0f,                      +0.0f,                                                                  // Bottom Left
-        -1.0f, +1.0f,       +0.0f,                      static_cast<GLfloat>(m_windowInfo.simHeight),                           // Top Left
-        +1.0f, -1.0f,       static_cast<GLfloat>(m_windowInfo.simWidth),      +0.0f,                                            // Bottom Right
-        +1.0f, +1.0f,       static_cast<GLfloat>(m_windowInfo.simWidth),      static_cast<GLfloat>(m_windowInfo.simHeight),     // Top Right
+        -1.0f + pixelSizeX, -1.0f + pixelSizeY,       interiorSMin, interiorTMin,   // Bottom Left
+        -1.0f + pixelSizeX, +1.0f - pixelSizeY,       interiorSMin, interiorTMax,   // Top Left
+        +1.0f - pixelSizeX, -1.0f + pixelSizeY,       interiorSMax, interiorTMin,   // Bottom Right
+        +1.0f - pixelSizeX, +1.0f - pixelSizeY,       interiorSMax, interiorTMax,   // Top Right
     };
     GLuint quadIndices[] = {
         0, 2, 1,
         1, 2, 3
     };
+
     GLTBufferLayout quadLayout;
     quadLayout.PushEntry(GL_FLOAT, sizeof(GLfloat), 2, GL_FALSE);
     quadLayout.PushEntry(GL_FLOAT, sizeof(GLfloat), 2, GL_FALSE);
@@ -236,13 +241,13 @@ void App::Start()
     /*
         Create Textures
     */
-    std::shared_ptr<GLTTexture2D> u1Tex = GLT_MAKE_TEXTURE(u1Tex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
-    std::shared_ptr<GLTTexture2D> u2Tex = GLT_MAKE_TEXTURE(u2Tex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
-    std::shared_ptr<GLTTexture2D> p1Tex = GLT_MAKE_TEXTURE(p1Tex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
-    std::shared_ptr<GLTTexture2D> p2Tex = GLT_MAKE_TEXTURE(p2Tex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
-    std::shared_ptr<GLTTexture2D> c1Tex = GLT_MAKE_TEXTURE(c1Tex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RGBA32F, GL_RGBA);
-    std::shared_ptr<GLTTexture2D> c2Tex = GLT_MAKE_TEXTURE(c2Tex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RGBA32F, GL_RGBA);
-    std::shared_ptr<GLTTexture2D> openTex = GLT_MAKE_TEXTURE(openTex, GL_TEXTURE_RECTANGLE_NV, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
+    std::shared_ptr<GLTTexture2D> u1Tex = GLT_MAKE_TEXTURE(u1Tex,     GL_TEXTURE_RECTANGLE, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
+    std::shared_ptr<GLTTexture2D> u2Tex = GLT_MAKE_TEXTURE(u2Tex,     GL_TEXTURE_RECTANGLE, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
+    std::shared_ptr<GLTTexture2D> p1Tex = GLT_MAKE_TEXTURE(p1Tex,     GL_TEXTURE_RECTANGLE, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
+    std::shared_ptr<GLTTexture2D> p2Tex = GLT_MAKE_TEXTURE(p2Tex,     GL_TEXTURE_RECTANGLE, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
+    std::shared_ptr<GLTTexture2D> c1Tex = GLT_MAKE_TEXTURE(c1Tex,     GL_TEXTURE_RECTANGLE, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RGBA32F, GL_RGBA);
+    std::shared_ptr<GLTTexture2D> c2Tex = GLT_MAKE_TEXTURE(c2Tex,     GL_TEXTURE_RECTANGLE, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RGBA32F, GL_RGBA);
+    std::shared_ptr<GLTTexture2D> openTex = GLT_MAKE_TEXTURE(openTex, GL_TEXTURE_RECTANGLE, m_windowInfo.simWidth, m_windowInfo.simHeight, GL_RG32F, GL_RG);
 
     /*
         Create Framebuffers
@@ -315,14 +320,15 @@ void App::Start()
         
         p_state->BindFramebuffer(*targetFBO);
         glViewport(0, 0, m_windowInfo.simWidth, m_windowInfo.simHeight);
+        
 
         /*-----------------------------------
          |          ADVECTION STAGE         |
          -----------------------------------*/
-        
+
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, uWRITE, 0);
         GLT_DEBUG_PUSH("Advection");
         p_state->BindShader(*advectionShader);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, uWRITE, 0);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glUniform1f(advectionShader->GetUniformLocation("timestep"), m_windowInfo.timeStep);
@@ -331,30 +337,34 @@ void App::Start()
         glUniform1i(advectionShader->GetUniformLocation("targetTex"), 1);
 
         p_state->ActiveTexture(0);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, uREAD);
+        glBindTexture(GL_TEXTURE_RECTANGLE, uREAD);
         p_state->ActiveTexture(1);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, uREAD);
-
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
-
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, cWRITE, 0);
-
-        glUniform1f(advectionShader->GetUniformLocation("dissipation"), m_windowInfo.inkDissipation);
-
-        p_state->ActiveTexture(0);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, uWRITE);
-        p_state->ActiveTexture(1);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, cREAD);
+        glBindTexture(GL_TEXTURE_RECTANGLE, uREAD);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
 
         uTEMP = uREAD;
         uREAD = uWRITE;
         uWRITE = uTEMP;
+        
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, cWRITE, 0);
+
+        p_state->BindShader(*advectionShader);
+
+        glUniform1f(advectionShader->GetUniformLocation("dissipation"), m_windowInfo.inkDissipation);
+
+        p_state->ActiveTexture(0);
+        glBindTexture(GL_TEXTURE_RECTANGLE, uREAD);
+        p_state->ActiveTexture(1);
+        glBindTexture(GL_TEXTURE_RECTANGLE, cREAD);
+
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
 
         cTEMP = cREAD;
         cREAD = cWRITE;
         cWRITE = cTEMP;
+        
+        
         GLT_DEBUG_POP();
         
         /*---------------------------------------
@@ -365,8 +375,7 @@ void App::Start()
 
         if (m_m1down) {
             p_state->BindShader(*splatShader);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, uWRITE, 0);
-            glClear(GL_COLOR_BUFFER_BIT);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, uWRITE, 0);
             float xAdjust = float(m_windowInfo.simWidth) / float(m_windowInfo.width);
             float yAdjust = float(m_windowInfo.simHeight) / float(m_windowInfo.height);
             float xDirRaw = static_cast<float>(p_mousePos[0] - p_mousePosOld[0]) * xAdjust;
@@ -375,25 +384,29 @@ void App::Start()
             float xDir = (xDirRaw / len) * m_windowInfo.force;
             float yDir = (yDirRaw / len) * m_windowInfo.force;
             glUniform3f(splatShader->GetUniformLocation("color"), xDir, yDir, 0.0);
-            glUniform2f(splatShader->GetUniformLocation("position"), 
-                static_cast<float>(p_mousePos[0] / m_windowInfo.width), 
-                static_cast<float>(1 - (p_mousePos[1] / m_windowInfo.height)));
-            glUniform1f(splatShader->GetUniformLocation("radius"), 0.5f);
+            float xPos = static_cast<float>(p_mousePos[0] / static_cast<float>(m_windowInfo.width));
+            float yPos = static_cast<float>(1.0 - (p_mousePos[1] / static_cast<float>(m_windowInfo.height)));
+            if (xPos < 0) { xPos = 0; }
+            else if (xPos > 1) { xPos = 1; }
+            if (yPos < 0) { yPos = 0; }
+            else if (yPos > 1) { yPos = 1; }
+            glUniform2f(splatShader->GetUniformLocation("position"), xPos, yPos);
+            glUniform1f(splatShader->GetUniformLocation("radius"), m_windowInfo.pRadius / static_cast<float>(m_windowInfo.simWidth));
             glUniform1i(splatShader->GetUniformLocation("base"), 0);
 
             p_state->ActiveTexture(0);
-            glBindTexture(GL_TEXTURE_RECTANGLE_NV, uREAD);
+            glBindTexture(GL_TEXTURE_RECTANGLE, uREAD);
 
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
 
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, cWRITE, 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, cWRITE, 0);
             glUniform3f(splatShader->GetUniformLocation("color"), _m_color[0], _m_color[1], _m_color[2]);
 
             p_state->ActiveTexture(0);
-            glBindTexture(GL_TEXTURE_RECTANGLE_NV, cREAD);
+            glBindTexture(GL_TEXTURE_RECTANGLE, cREAD);
 
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
-
+            
             uTEMP = uREAD;
             uREAD = uWRITE;
             uWRITE = uTEMP;
@@ -401,6 +414,7 @@ void App::Start()
             cTEMP = cREAD;
             cREAD = cWRITE;
             cWRITE = cTEMP;
+            
         }
     
         GLT_DEBUG_POP();
@@ -411,28 +425,28 @@ void App::Start()
         GLT_DEBUG_PUSH("Vorticity");
 
         p_state->BindShader(*vorticityGradShader);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, freeTex, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, freeTex, 0);
 
         glUniform1i(vorticityGradShader->GetUniformLocation("u"), 0);
 
         p_state->ActiveTexture(0);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, uREAD);
+        glBindTexture(GL_TEXTURE_RECTANGLE, uREAD);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
         
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, uWRITE, 0);
+
         p_state->BindShader(*vorticityShader);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, uWRITE, 0);
 
         glUniform1i(vorticityShader->GetUniformLocation("vort"), 0);
         glUniform1i(vorticityShader->GetUniformLocation("u"), 1);
         glUniform1f(vorticityShader->GetUniformLocation("timestep"), m_windowInfo.timeStep);
-        glUniform1f(vorticityShader->GetUniformLocation("epsilon"), 2.4414e-4f);
-        glUniform2f(vorticityShader->GetUniformLocation("dxscale"), m_windowInfo.curl * m_windowInfo.dx, m_windowInfo.curl * m_windowInfo.dx);
+        glUniform2f(vorticityShader->GetUniformLocation("dxscale"), m_windowInfo.vorticityScale * m_windowInfo.dx, m_windowInfo.vorticityScale * m_windowInfo.dx);
 
         p_state->ActiveTexture(0);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, freeTex);
+        glBindTexture(GL_TEXTURE_RECTANGLE, freeTex);
         p_state->ActiveTexture(1);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, uREAD);
+        glBindTexture(GL_TEXTURE_RECTANGLE, uREAD);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
         
@@ -448,13 +462,13 @@ void App::Start()
         GLT_DEBUG_PUSH("Divergence");
 
         p_state->BindShader(*divergenceShader);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, freeTex, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, freeTex, 0);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glUniform1i(divergenceShader->GetUniformLocation("w"), 0);
 
         p_state->ActiveTexture(0);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, uREAD);
+        glBindTexture(GL_TEXTURE_RECTANGLE, uREAD);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
 
@@ -473,25 +487,23 @@ void App::Start()
         glUniform1f(jacobiShader->GetUniformLocation("rBeta"), 0.25f);
 
         p_state->ActiveTexture(0);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, freeTex);
+        glBindTexture(GL_TEXTURE_RECTANGLE, freeTex);
 
         p_state->ActiveTexture(1);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, pWRITE);
+        glBindTexture(GL_TEXTURE_RECTANGLE, pWRITE);
         glClearTexImage(pWRITE, 0, GL_RG, GL_FLOAT, NULL);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, pREAD);
+        glBindTexture(GL_TEXTURE_RECTANGLE, pREAD);
         glClearTexImage(pREAD, 0, GL_RG, GL_FLOAT, NULL);
-        
 
         const unsigned int numItersPressure = 40;
         for (unsigned int i = 0; i < numItersPressure; i++) {
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, pREAD, 0);
-            glClear(GL_COLOR_BUFFER_BIT);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, pWRITE, 0);
 
             p_state->ActiveTexture(1);
-            glBindTexture(GL_TEXTURE_RECTANGLE_NV, pWRITE);
+            glBindTexture(GL_TEXTURE_RECTANGLE, pREAD);
 
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
-            
+
             pTEMP = pREAD;
             pREAD = pWRITE;
             pWRITE = pTEMP;
@@ -505,40 +517,44 @@ void App::Start()
         GLT_DEBUG_PUSH("Subtract Gradient");
 
         p_state->BindShader(*gradientShader);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, uWRITE, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, uWRITE, 0);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glUniform1i(gradientShader->GetUniformLocation("p"), 0);
         glUniform1i(gradientShader->GetUniformLocation("w"), 1);
 
         p_state->ActiveTexture(0);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, pREAD);
+        glBindTexture(GL_TEXTURE_RECTANGLE, pREAD);
         p_state->ActiveTexture(1);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, uREAD);
+        glBindTexture(GL_TEXTURE_RECTANGLE, uREAD);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
         
         uTEMP = uREAD;
         uREAD = uWRITE;
         uWRITE = uTEMP;
+        
 
         GLT_DEBUG_POP();
         /*---------------------------------------------
          |          COPY TO DRAW FRAMEBUFFER          |
          ---------------------------------------------*/
-        
+
         GLT_DEBUG_PUSH("Draw");
 
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_NV, cWRITE, 0);
-        
-        p_state->BindShader(*displayShader);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, cWRITE, 0);
 
+        p_state->BindShader(*displayShader);
         glUniform1i(displayShader->GetUniformLocation("tex"), 0);
 
         p_state->ActiveTexture(0);
-        glBindTexture(GL_TEXTURE_RECTANGLE_NV, cREAD);
+        glBindTexture(GL_TEXTURE_RECTANGLE, cREAD);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+        
+        cTEMP = cREAD;
+        cREAD = cWRITE;
+        cWRITE = cTEMP;
 
         GLT_DEBUG_POP();
         
@@ -550,9 +566,10 @@ void App::Start()
         glBlitNamedFramebuffer(*targetFBO, 0,
             0, 0, m_windowInfo.simWidth, m_windowInfo.simHeight,
             0, 0, m_windowInfo.width, m_windowInfo.height,
-            GL_COLOR_BUFFER_BIT, GL_NEAREST);
+            GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
         GLT_DEBUG_POP();
+
         
         GLT_DEBUG_PUSH("GLFW Calls");
         glfwSwapBuffers(p_windowHandle);

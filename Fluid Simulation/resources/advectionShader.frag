@@ -19,7 +19,7 @@ vec4 bilerp(sampler2DRect tex, vec2 uv)
     vec4 st;
     st.xy = floor(uv - 0.5) + 0.5;
     st.zw = st.xy + 1.0;
-  
+
     vec2 t = uv - st.xy; //interpolating factors 
     
     vec4 tex11 = texture(tex, st.xy);

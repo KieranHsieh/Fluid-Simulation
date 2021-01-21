@@ -3,6 +3,7 @@
 #define H_GLT_APP
 
 #include "GLT/OpenGL/State.h"
+#include "GLT/OpenGL/Shader.h"
 #include <memory>
 #include <stdint.h>
 #include <glad/glad.h>
@@ -18,11 +19,12 @@ namespace GLT {
             uint32_t simHeight;
             const char* title;
             float timeStep;
-            float curl;
+            float vorticityScale;
             float velocityDissipation;
             float inkDissipation;
             float dx;
             float force;
+            float pRadius;
         };
         App(const WindowInfo& info);
         ~App();

@@ -13,10 +13,11 @@ int main() {
         // Fluid Sim Parameters
         info.dx = 1.0;
         info.timeStep = 0.5;
-        info.curl = 0.789f;
-        info.velocityDissipation = 0.997f;
-        info.inkDissipation = 0.987f;
+        info.vorticityScale = 0.4f;
+        info.velocityDissipation = 0.9999f;
+        info.inkDissipation = 0.999f;
         info.force = 1.0f;
+        info.pRadius = 100.0f;
 
         GLT::App app(info);
         app.Start();
