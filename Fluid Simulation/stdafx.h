@@ -7,15 +7,17 @@
 #include <iostream>
 #include <stdlib.h>
 #include <cstring>
+#include <chrono>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 
 #include <glad/glad.h>
 
+
 #ifdef GLT_DEBUG
 //#define GLT_DEBUG_MEMORY
-#define GLT_DEBUG_PROFILE
+//#define GLT_DEBUG_PROFILE
 #endif
 
 #ifdef GLT_DEBUG_MEMORY

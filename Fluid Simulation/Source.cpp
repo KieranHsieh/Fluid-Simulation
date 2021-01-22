@@ -22,5 +22,4 @@ int main() {
         GLT::App app(info);
         app.Start();
     }
-    std::cin.get();
 }
