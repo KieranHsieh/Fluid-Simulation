@@ -66,6 +66,7 @@ App::App(const WindowInfo& info)
 #endif
     glfwSetWindowUserPointer(p_windowHandle, this);
     SetupOGLGLFWCallbacks();
+    std::cout << glGetString(GL_VENDOR) << ", " << glGetString(GL_RENDERER) << "\n";
     p_state = std::make_unique<GLTState>();
 }
 
@@ -115,7 +116,7 @@ void App::SetupOGLGLFWCallbacks()
         const char* message,
         const void* userParam) {
 
-        const char* ctype = nullptr;
+        const char* ctype = "Unknown Type";
         switch (type) {
         case GL_DEBUG_TYPE_ERROR: ctype = "Error"; break;
         case GL_DEBUG_TYPE_OTHER: ctype = "Other"; break;
@@ -128,7 +129,7 @@ void App::SetupOGLGLFWCallbacks()
         case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: ctype = "Deprecated Behavior"; break;
         }
 
-        const char* cseverity = nullptr;
+        const char* cseverity = "Unknown Severity";
         switch (severity) {
         case GL_DEBUG_SEVERITY_LOW: cseverity = "LOW Severity"; break;
         case GL_DEBUG_SEVERITY_HIGH: cseverity = "HIGH Severity"; break;

@@ -2,7 +2,7 @@
 OpenGL 2D Fluid Simulation
 
 This is a fluid simulation solving the Navier-Stokes equations for incompressible flow writtin in C++ and OpenGL. 
-The simulation is interactable, and runs at around 90 FPS on my GeForce GTX 1660 TI at a 512 x 512 simulation resolution.
+The simulation is interactable, and runs at around 90 FPS on my GeForce GTX 1660 TI at a 1920 x 1080 simulation resolution, and 164 FPS at a 512 x 512 simulation resolution.
 Interacting with the simulation is done by clicking and dragging the mouse, which adds ink and force depending on the position and direction the mouse was moving.
 
 The simulation works in 3 major steps:
