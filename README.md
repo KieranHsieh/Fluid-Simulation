@@ -54,6 +54,11 @@ Now that the pressure has been calculated, the gradient of the pressure must be 
 
 ![SimulationGif](screenshots/simss.jpg)
 
+# Additional Notes
+
+## Vorticity
+Vorticity was simple to add to the base program, and was done by simply calculating vorticity and the vorticity force in two separate shaders (found in Fluid Simulation/resources/vorticityGradShader.frag and Fluid Simulation/resources/vorticityShader.frag). An important note is that this will bug out if you do not implement some base boundary conditions (which in my case is that all border pixels are 0). The addition of vorticity results in a more "smokey" looking simulation that can be controlled via the vorticityScale parameter.
+
 # References
 - [GPU Gems](https://developer.download.nvidia.com/books/HTML/gpugems/gpugems_ch38.html)
 - [Erkaman Github Repo](https://github.com/Erkaman/fluid_sim)
