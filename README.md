@@ -12,6 +12,12 @@ The simulation works in 3 major steps:
 
 Since this simulation was focused more on getting visuals for non-viscous fluids such as smoke, the diffusion step was skipped.
 
+# Results
+
+![SimulationGif](screenshots/simgif.gif)
+
+![SimulationGif](screenshots/simss.jpg)
+
 # Advection
 
 The advection step in the simulation is what causes the fluid to move, and is performed on both a velocity texture, advecting itself, and the color texture, which holds values for ink.
@@ -47,12 +53,6 @@ on the previous iteration, so the result of the previous iteration must be saved
 ## Gradient Subtraction
 Now that the pressure has been calculated, the gradient of the pressure must be subtracted from the velocity field, so that the velocity field's divergence is back to 0. This is done through one last fragment shader
 (found in Fluid Simulation/resources/gradientSubtractionShader.frag). This fragment shader works by simply calculating the gradient of the given field (pressure in this case), and subtracting it from the value of the velocity field.
-
-# Results
-
-![SimulationGif](screenshots/simgif.gif)
-
-![SimulationGif](screenshots/simss.jpg)
 
 # Additional Notes
 
